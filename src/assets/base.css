@@ -1,0 +1,108 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&family=Poppins:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  /* Brand palette */
+  --color-brown-darkest: #2e160f;
+  --color-brown-dark: #46261d;
+  --color-brown: #764734;
+  --color-brown-light: #a5765d;
+  --color-cream: #fbf6f1;
+  --color-white: #ffffff;
+
+  --color-text: #2e1a12;
+  --color-text-soft: rgba(46, 26, 18, 0.66);
+  --color-text-on-dark: #f4e9e1;
+  --color-text-on-dark-soft: rgba(244, 233, 225, 0.7);
+
+  --color-border: rgba(70, 38, 29, 0.14);
+
+  /* Playfair Display: serif elegan khas signage cafe.
+     Poppins: sans-serif bulat, nyaman & jelas dibaca di layar. */
+  --font-heading: 'Playfair Display', 'Georgia', serif;
+  --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 22px;
+
+  --shadow-card: 0 12px 28px rgba(46, 22, 15, 0.1);
+  --section-gap: 72px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--color-text);
+  background: var(--color-white);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-heading);
+  font-weight: 600;
+  line-height: 1.15;
+  color: var(--color-brown-darkest);
+}
+
+button {
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+img {
+  max-width: 100%;
+  display: block;
+}
+
+.container {
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 0 28px;
+}
+
+/* visible keyboard focus */
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-brown);
+  outline-offset: 3px;
+}
+
+/* Rata kanan-kiri (justify) untuk paragraf panjang di layar mobile,
+   supaya teks lebih rapi tanpa "gigi gergaji" di sisi kanan. */
+@media (max-width: 780px) {
+  p {
+    text-align: justify;
+    text-justify: inter-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
