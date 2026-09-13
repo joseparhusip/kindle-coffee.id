@@ -1,10 +1,10 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { jsPDF } from 'jspdf'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/data/products'
-import logoUtama from '@/components/icons/logo-utama.png'
+import logoUtama from '@/data/img/logo-loading.png'
 
 const cart = useCartStore()
 
@@ -35,6 +35,75 @@ const hasActiveFilter = computed(() => Boolean(startDate.value || endDate.value)
 function resetFilter() {
   startDate.value = ''
   endDate.value = ''
+}
+
+// --- Order pending: countdown 1 menit + tombol "Bayar Lagi" ---
+
+// Jam berjalan, di-update tiap detik supaya countdown & status expired
+// ke-refresh otomatis tanpa perlu reload halaman.
+const now = ref(Date.now())
+let tickInterval = null
+
+onMounted(() => {
+  cart.expireStalePendingOrders()
+  tickInterval = setInterval(() => {
+    now.value = Date.now()
+    cart.expireStalePendingOrders()
+  }, 1000)
+})
+
+onUnmounted(() => {
+  if (tickInterval) clearInterval(tickInterval)
+})
+
+function remainingSeconds(order) {
+  if (!order.expiresAt) return 0
+  return Math.max(0, Math.ceil((order.expiresAt - now.value) / 1000))
+}
+
+function isPendingExpired(order) {
+  return order.status === 'pending' && remainingSeconds(order) <= 0
+}
+
+function formatCountdown(order) {
+  const s = remainingSeconds(order)
+  const mm = String(Math.floor(s / 60)).padStart(2, '0')
+  const ss = String(s % 60).padStart(2, '0')
+  return `${mm}:${ss}`
+}
+
+const resumingOrderId = ref(null)
+
+function resumePayment(order) {
+  if (order.status !== 'pending' || isPendingExpired(order) || !order.snapToken) return
+
+  if (typeof window === 'undefined' || !window.snap) {
+    console.error('Snap.js Midtrans belum siap dimuat.')
+    return
+  }
+
+  resumingOrderId.value = order.id
+
+  window.snap.pay(order.snapToken, {
+    onSuccess(result) {
+      console.log('Pembayaran berhasil:', result)
+      cart.markOrderPaid(order.id)
+      resumingOrderId.value = null
+    },
+    onPending(result) {
+      console.log('Pembayaran pending:', result)
+      cart.markOrderPaid(order.id)
+      resumingOrderId.value = null
+    },
+    onError(result) {
+      console.error('Pembayaran gagal:', result)
+      cart.markOrderFailed(order.id)
+      resumingOrderId.value = null
+    },
+    onClose() {
+      resumingOrderId.value = null
+    },
+  })
 }
 
 // --- Modal konfirmasi hapus riwayat (pengganti confirm() bawaan browser) ---
@@ -224,15 +293,56 @@ async function downloadReceipt(order) {
     </div>
 
     <ul v-else class="order-list">
-      <li v-for="order in filteredOrders" :key="order.id" class="order-card">
+      <li
+        v-for="order in filteredOrders"
+        :key="order.id"
+        class="order-card"
+        :class="{
+          'order-card--pending': order.status === 'pending' && !isPendingExpired(order),
+          'order-card--inactive': order.status === 'expired' || order.status === 'failed' || isPendingExpired(order),
+        }"
+      >
         <div class="order-card__head">
           <div>
             <span class="order-card__id">{{ order.id }}</span>
             <span class="order-card__date">{{ formatDate(order.date) }}</span>
+
+            <span
+              v-if="order.status === 'pending' && !isPendingExpired(order)"
+              class="order-status-badge order-status-badge--pending"
+            >
+              Menunggu Pembayaran &middot; {{ formatCountdown(order) }}
+            </span>
+            <span
+              v-else-if="order.status === 'expired' || isPendingExpired(order)"
+              class="order-status-badge order-status-badge--expired"
+            >
+              Pembayaran Kedaluwarsa
+            </span>
+            <span
+              v-else-if="order.status === 'failed'"
+              class="order-status-badge order-status-badge--failed"
+            >
+              Pembayaran Gagal
+            </span>
           </div>
           <div class="order-card__head-right">
             <span class="order-card__total">{{ formatRupiah(order.total) }}</span>
-            <button class="order-card__pdf" @click="downloadReceipt(order)">
+
+            <button
+              v-if="order.status === 'pending'"
+              class="order-card__pay-again"
+              :disabled="isPendingExpired(order) || resumingOrderId === order.id"
+              @click="resumePayment(order)"
+            >
+              {{ resumingOrderId === order.id ? 'Membuka...' : 'Bayar Lagi' }}
+            </button>
+
+            <button
+              class="order-card__pdf"
+              :disabled="order.status && order.status !== 'paid'"
+              @click="downloadReceipt(order)"
+            >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
                 <path d="M12 3V15M12 15L8 11M12 15L16 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                 <path d="M4 17V19C4 20.1 4.9 21 6 21H18C19.1 21 20 20.1 20 19V17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
@@ -461,6 +571,69 @@ async function downloadReceipt(order) {
   overflow: hidden;
 }
 
+/* Order menunggu pembayaran: kasih aksen supaya kelihatan beda/perlu aksi */
+.order-card--pending {
+  border-color: rgba(178, 118, 15, 0.35);
+  box-shadow: 0 0 0 1px rgba(178, 118, 15, 0.12);
+}
+
+/* Order kedaluwarsa / gagal: di-nonaktifkan total secara visual & interaksi */
+.order-card--inactive {
+  opacity: 0.55;
+  filter: grayscale(0.4);
+  pointer-events: none;
+}
+
+.order-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+.order-status-badge--pending {
+  background: rgba(178, 118, 15, 0.12);
+  color: #a9670f;
+}
+
+.order-status-badge--expired {
+  background: rgba(90, 90, 90, 0.12);
+  color: #5f5f5f;
+}
+
+.order-status-badge--failed {
+  background: rgba(192, 57, 43, 0.1);
+  color: #c0392b;
+}
+
+.order-card__pay-again {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  background: var(--color-brown-dark);
+  color: var(--color-white);
+  font-size: 12.5px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.order-card__pay-again:hover:not(:disabled) {
+  background: var(--color-brown);
+}
+
+.order-card__pay-again:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .order-card__head {
   display: flex;
   align-items: center;
@@ -517,6 +690,16 @@ async function downloadReceipt(order) {
 .order-card__pdf:hover {
   border-color: var(--color-brown-dark);
   background: var(--color-cream);
+}
+
+.order-card__pdf:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.order-card__pdf:disabled:hover {
+  border-color: var(--color-border);
+  background: var(--color-white);
 }
 
 .order-card__items {

@@ -64,28 +64,36 @@ async function handleCheckout() {
       return
     }
 
+    // PENTING: catat order ini ke riwayat sebagai 'pending' SEBELUM popup
+    // Midtrans dibuka. Kalau HP mati / browser ke-close paksa tepat setelah
+    // popup kebuka, datanya sudah aman tersimpan (bukan menunggu callback
+    // onSuccess/onClose yang mungkin tidak akan pernah terpanggil).
+    cart.createPendingOrder(orderId, data.token)
+
     window.snap.pay(data.token, {
       onSuccess(result) {
         console.log('Pembayaran berhasil:', result)
-        // Baru catat ke riwayat & kosongkan keranjang setelah bayar sukses.
-        cart.checkout()
+        cart.markOrderPaid(orderId)
         orderPlaced.value = true
         isCheckingOut.value = false
       },
       onPending(result) {
         console.log('Pembayaran pending:', result)
         // Tetap dianggap "dipesan" — misal transfer VA yang belum dibayar.
-        cart.checkout()
+        cart.markOrderPaid(orderId)
         orderPlaced.value = true
         isCheckingOut.value = false
       },
       onError(result) {
         console.error('Pembayaran gagal:', result)
+        cart.markOrderFailed(orderId)
         errorMessage.value = 'Pembayaran gagal diproses. Keranjangmu masih aman, coba lagi ya.'
         isCheckingOut.value = false
       },
       onClose() {
-        // Popup ditutup tanpa menyelesaikan pembayaran — keranjang dibiarkan utuh.
+        // Popup ditutup tanpa menyelesaikan pembayaran. Order TETAP 'pending'
+        // di riwayat — user masih bisa lanjut bayar lewat tombol "Bayar Lagi"
+        // di halaman Riwayat, selama belum lewat 1 menit.
         isCheckingOut.value = false
       },
     })

@@ -8,6 +8,11 @@ const HISTORY_STORAGE_KEY = 'kindle-coffee-orders'
 
 const TAX_RATE = 0.11 // PPN 11% (tarif umum 2026, non-barang mewah)
 
+// Batas waktu order "pending" (sudah dapat token Midtrans, popup sudah/sedang
+// dibuka) boleh dilanjutkan lagi lewat tombol "Bayar Lagi" di riwayat.
+// Setelah ini lewat, order otomatis dianggap hangus (expired).
+const PENDING_PAYMENT_DURATION_MS = 60 * 1000 // 1 menit
+
 // Two cart lines are "the same" only if product, size, AND note all match.
 // That lets someone order e.g. a Latte Large "less sugar" as a separate
 // line from a Latte Medium with no note.
@@ -140,6 +145,91 @@ export const useCartStore = defineStore('cart', () => {
     return order
   }
 
+  // --- Pending order (dipanggil SEBELUM window.snap.pay() dibuka) ---
+  //
+  // Kenapa dipisah dari checkout(): kalau kita baru mencatat riwayat di
+  // callback onSuccess/onPending Midtrans, dan device user mati / app
+  // ke-force-close TEPAT setelah popup Snap kebuka, callback itu tidak
+  // akan pernah terpanggil — order jadi hilang begitu saja padahal token
+  // pembayarannya sudah valid.
+  //
+  // Solusinya: catat order dengan status 'pending' ke riwayat SEGERA
+  // setelah token didapat, sebelum snap.pay() dipanggil. Keranjang belum
+  // dikosongkan di titik ini (baru dikosongkan kalau pembayaran benar-benar
+  // sukses lewat markOrderPaid). Order pending ini punya batas waktu
+  // PENDING_PAYMENT_DURATION_MS untuk dilanjutkan lewat tombol "Bayar Lagi".
+  function createPendingOrder(orderId, snapToken) {
+    if (items.value.length === 0) return null
+
+    const subtotal = totalPrice.value
+    const tax = Math.round(subtotal * TAX_RATE)
+    const now = Date.now()
+
+    const order = {
+      id: orderId,
+      date: new Date(now).toISOString(),
+      items: items.value.map((item) => ({
+        id: item.id,
+        name: item.name,
+        image: item.image,
+        size: item.size,
+        note: item.note,
+        price: item.price,
+        qty: item.qty,
+      })),
+      totalItems: totalItems.value,
+      subtotal,
+      tax,
+      total: subtotal + tax,
+      // 'pending' -> 'paid' (sukses) | 'failed' (onError) | 'expired' (lewat 1 menit)
+      status: 'pending',
+      snapToken,
+      expiresAt: now + PENDING_PAYMENT_DURATION_MS,
+    }
+
+    orderHistory.value = [order, ...orderHistory.value]
+    return order
+  }
+
+  function findOrder(orderId) {
+    return orderHistory.value.find((order) => order.id === orderId) || null
+  }
+
+  // Dipanggil saat pembayaran sukses/pending (VA dsb) — baik dari checkout
+  // pertama kali maupun dari "Bayar Lagi" di riwayat.
+  function markOrderPaid(orderId) {
+    const order = findOrder(orderId)
+    if (!order) return
+    order.status = 'paid'
+    order.snapToken = null
+    order.expiresAt = null
+    clearCart()
+  }
+
+  // Dipanggil saat Midtrans eksplisit melaporkan pembayaran gagal (onError).
+  // Token biasanya sudah tidak bisa dipakai lagi, jadi tidak bisa "Bayar Lagi".
+  function markOrderFailed(orderId) {
+    const order = findOrder(orderId)
+    if (!order) return
+    order.status = 'failed'
+    order.snapToken = null
+    order.expiresAt = null
+  }
+
+  // Cek semua order pending, tandai 'expired' kalau sudah lewat batas
+  // waktunya. Dipanggil berkala (setInterval) dari HistoryView supaya
+  // status "hangus"-nya permanen tersimpan (bukan cuma dihitung di layar),
+  // dan tetap konsisten walau halaman di-refresh setelah waktunya habis.
+  function expireStalePendingOrders() {
+    const now = Date.now()
+    orderHistory.value.forEach((order) => {
+      if (order.status === 'pending' && order.expiresAt && now > order.expiresAt) {
+        order.status = 'expired'
+        order.snapToken = null
+      }
+    })
+  }
+
   function clearHistory() {
     orderHistory.value = []
   }
@@ -155,6 +245,10 @@ export const useCartStore = defineStore('cart', () => {
     totalPrice,
     orderHistory,
     checkout,
+    createPendingOrder,
+    markOrderPaid,
+    markOrderFailed,
+    expireStalePendingOrders,
     clearHistory,
   }
 })
