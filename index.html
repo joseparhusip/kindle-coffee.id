@@ -5,6 +5,18 @@
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kindle Coffee</title>
+    <!--
+      Snap.js dari Midtrans. Ini yang menyediakan window.snap.pay(...) di
+      frontend. data-client-key HARUS client key (bukan server key yang
+      dipakai di api/checkout.js) — ambil dari Midtrans Dashboard >
+      Settings > Access Keys. Untuk sandbox dulu, nanti ganti domain
+      app.sandbox.midtrans.com -> app.midtrans.com kalau sudah production.
+    -->
+    <script
+      type="text/javascript"
+      src="https://app.sandbox.midtrans.com/snap/snap.js"
+      data-client-key="SB-Mid-client-gAm8oXUyihl8XTj-"
+    ></script>
   </head>
   <body>
     <div id="app"></div>
