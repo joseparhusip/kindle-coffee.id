@@ -5,7 +5,7 @@ import { jsPDF } from 'jspdf'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/data/products'
 import { loadMidtransSnap } from '@/utils/loadMidtransSnap'
-import logoUtama from '@/data/img/logo-loading.png'
+import logoUtama from '@/data/img/logo-loading.webp'
 
 const cart = useCartStore()
 

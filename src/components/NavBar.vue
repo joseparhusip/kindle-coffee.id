@@ -2,7 +2,7 @@
 import { ref } from 'vue'
 import { RouterLink, useRoute } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
-import logoNavbar from '@/components/icons/logo-utama.png'
+import logoNavbar from '@/components/icons/logo-utama.webp'
 
 const cart = useCartStore()
 const route = useRoute()

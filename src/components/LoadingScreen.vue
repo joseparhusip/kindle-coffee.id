@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted } from 'vue'
-import logoLoading from '@/data/img/logo-loading.png'
+import logoLoading from '@/data/img/logo-loading.webp'
 
 const isVisible = ref(true)
 const isLeaving = ref(false)

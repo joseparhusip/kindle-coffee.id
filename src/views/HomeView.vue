@@ -2,7 +2,7 @@
 import { RouterLink } from 'vue-router'
 import ProductCard from '@/components/ProductCard.vue'
 import { products } from '@/data/products'
-import heroImg from '@/data/img/img-home.png'
+import heroImg from '@/data/img/img-home.webp'
 
 const featured = products.filter((p) => p.featured)
 

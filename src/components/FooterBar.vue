@@ -1,6 +1,6 @@
 <script setup>
 import { RouterLink } from 'vue-router'
-import logoNavbar from '@/components/icons/logo-utama.png'
+import logoNavbar from '@/components/icons/logo-utama.webp'
 import logoInstagram from '@/components/icons/logo-instagram.svg'
 
 const year = new Date().getFullYear()
