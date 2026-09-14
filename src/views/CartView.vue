@@ -4,11 +4,21 @@ import { RouterLink } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/data/products'
 import { loadMidtransSnap } from '@/utils/loadMidtransSnap'
+import SeatMap from '@/components/SeatMap.vue'
 
 const cart = useCartStore()
 const orderPlaced = ref(false)
 const isCheckingOut = ref(false)
 const errorMessage = ref('')
+
+// Nomor meja/kursi terakhir yang berhasil dipesan, dipakai untuk
+// ditampilkan lagi di layar "Pesanan diterima" ("meja kamu: 3, 4").
+const placedSeats = ref([])
+
+// TODO: idealnya ini datang dari backend (kursi mana yang sedang dipakai
+// pesanan orang lain hari ini). Untuk sekarang hardcode kosong dulu supaya
+// semua kursi terlihat tersedia.
+const occupiedSeats = ref([])
 
 const TAX_RATE = 0.11 // PPN 11% (tarif umum 2026, non-barang mewah)
 
@@ -19,10 +29,21 @@ const grandTotal = computed(() => cart.totalPrice + taxAmount.value)
 async function handleCheckout() {
   if (cart.items.length === 0 || isCheckingOut.value) return
 
+  // Wajib pilih meja dulu — kalau belum, hentikan di sini dan kasih tau
+  // usernya, jangan lanjut buka popup pembayaran.
+  if (cart.selectedSeats.length === 0) {
+    errorMessage.value = 'Pilih nomor meja dulu ya, sebelum checkout.'
+    return
+  }
+
   isCheckingOut.value = true
   errorMessage.value = ''
 
   try {
+    // Snapshot sekarang, karena cart.selectedSeats akan dikosongkan store
+    // begitu pembayaran sukses (lihat markOrderPaid di cart.js).
+    placedSeats.value = [...cart.selectedSeats]
+
     const orderId = `ORDER-${Date.now()}`
 
     // Tiap baris keranjang jadi satu item_details. PPN ditambahkan sebagai
@@ -124,7 +145,11 @@ async function handleCheckout() {
         <path d="M8 12.5L10.8 15L16 9.5" stroke="var(--color-brown-dark)" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
       <h2>Pesanan diterima</h2>
-      <p>Terima kasih! Pesananmu sedang disiapkan oleh barista kami.</p>
+      <p>
+        Terima kasih! Pesananmu sedang disiapkan oleh barista kami dan akan diantar
+        ke <strong v-if="placedSeats.length">meja nomor {{ placedSeats.join(', ') }}</strong
+        ><strong v-else>mejamu</strong>.
+      </p>
       <div class="state__actions">
         <RouterLink to="/menu" class="btn btn--primary">Pesan Lagi</RouterLink>
         <RouterLink to="/history" class="btn btn--ghost">Lihat Riwayat Pesanan</RouterLink>
@@ -174,6 +199,10 @@ async function handleCheckout() {
         </li>
       </ul>
 
+      <div class="cart-main">
+        <SeatMap v-model="cart.selectedSeats" :occupied="occupiedSeats" />
+      </div>
+
       <aside class="summary">
         <h3>Ringkasan</h3>
         <div class="summary__row">
@@ -194,8 +223,18 @@ async function handleCheckout() {
         </div>
 
         <p v-if="errorMessage" class="summary__error">{{ errorMessage }}</p>
+        <p v-else-if="cart.selectedSeats.length === 0" class="summary__hint">
+          Pilih meja di atas dulu sebelum checkout.
+        </p>
+        <p v-else class="summary__hint">
+          Pesanan akan diantar ke meja {{ cart.selectedSeats.join(', ') }}.
+        </p>
 
-        <button class="btn btn--primary btn--block" :disabled="isCheckingOut" @click="handleCheckout">
+        <button
+          class="btn btn--primary btn--block"
+          :disabled="isCheckingOut || cart.selectedSeats.length === 0"
+          @click="handleCheckout"
+        >
           <span v-if="isCheckingOut">Memproses...</span>
           <span v-else>Checkout Sekarang</span>
         </button>
@@ -306,16 +345,28 @@ async function handleCheckout() {
 .cart-layout {
   display: grid;
   grid-template-columns: 1fr 320px;
+  grid-template-areas:
+    'list    summary'
+    'seats   summary';
   gap: 32px;
   align-items: flex-start;
 }
 
 .cart-list {
+  grid-area: list;
   list-style: none;
   border: 1px solid var(--color-border);
   border-radius: 16px;
   overflow: hidden;
   background: var(--color-white);
+}
+
+.cart-main {
+  grid-area: seats;
+}
+
+.summary {
+  grid-area: summary;
 }
 
 .cart-list__scroll {
@@ -482,6 +533,16 @@ async function handleCheckout() {
   margin-top: 6px;
 }
 
+.summary__hint {
+  font-size: 13px;
+  color: var(--color-text-soft);
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-bottom: 12px;
+}
+
 .summary__error {
   font-size: 13px;
   color: #c0392b;
@@ -512,6 +573,10 @@ async function handleCheckout() {
   }
   .cart-layout {
     grid-template-columns: 1fr;
+    grid-template-areas:
+      'list'
+      'seats'
+      'summary';
   }
   .cart-item {
     display: flex;

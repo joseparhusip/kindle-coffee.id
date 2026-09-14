@@ -315,6 +315,9 @@ async function downloadReceipt(order) {
           <div>
             <span class="order-card__id">{{ order.id }}</span>
             <span class="order-card__date">{{ formatDate(order.date) }}</span>
+            <span v-if="order.seats?.length" class="order-card__table">
+              Meja {{ order.seats.join(', ') }}
+            </span>
 
             <span
               v-if="order.status === 'pending' && !isPendingExpired(order)"
@@ -673,6 +676,19 @@ async function downloadReceipt(order) {
   font-size: 12.5px;
   color: var(--color-text-soft);
   margin-top: 2px;
+}
+
+.order-card__table {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 6px;
+  padding: 3px 11px;
+  border-radius: 999px;
+  background: var(--color-cream);
+  border: 1px solid var(--color-border);
+  color: var(--color-brown-dark);
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .order-card__total {

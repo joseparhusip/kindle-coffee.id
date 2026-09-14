@@ -53,6 +53,25 @@ export const useCartStore = defineStore('cart', () => {
   // Pesanan terbaru ada di index 0.
   const orderHistory = ref(loadJSON(HISTORY_STORAGE_KEY, []))
 
+  // Nomor kursi/meja yang sedang dipilih user di halaman Keranjang, SEBELUM
+  // checkout ditekan. Satu keranjang = satu pesanan = diantar ke satu meja,
+  // jadi ini bukan array per-item, cukup satu daftar nomor kursi untuk
+  // seluruh isi keranjang. Disimpan ke localStorage juga supaya tidak
+  // hilang kalau user reload halaman sebelum sempat checkout.
+  const selectedSeats = ref(loadJSON('kindle-coffee-selected-seats', []))
+
+  watch(
+    selectedSeats,
+    (newSeats) => {
+      saveJSON('kindle-coffee-selected-seats', newSeats)
+    },
+    { deep: true },
+  )
+
+  function setSeats(seats) {
+    selectedSeats.value = seats
+  }
+
   // Setiap kali isi keranjang berubah (tambah, kurang, hapus, dsb),
   // otomatis simpan ulang ke localStorage. deep:true karena qty di dalam
   // tiap objek item juga perlu dipantau, bukan cuma panjang array-nya.
@@ -137,10 +156,15 @@ export const useCartStore = defineStore('cart', () => {
       subtotal,
       tax,
       total: subtotal + tax,
+      // Nomor kursi/meja yang dipilih user saat itu, mis. [3, 4]. Dicatat
+      // apa adanya (snapshot) supaya walau user nanti ganti pilihan kursi
+      // untuk pesanan berikutnya, riwayat pesanan lama tidak ikut berubah.
+      seats: [...selectedSeats.value],
     }
 
     orderHistory.value = [order, ...orderHistory.value]
     clearCart()
+    selectedSeats.value = []
 
     return order
   }
@@ -185,6 +209,8 @@ export const useCartStore = defineStore('cart', () => {
       status: 'pending',
       snapToken,
       expiresAt: now + PENDING_PAYMENT_DURATION_MS,
+      // Snapshot nomor kursi/meja, sama seperti di checkout() biasa.
+      seats: [...selectedSeats.value],
     }
 
     orderHistory.value = [order, ...orderHistory.value]
@@ -204,6 +230,7 @@ export const useCartStore = defineStore('cart', () => {
     order.snapToken = null
     order.expiresAt = null
     clearCart()
+    selectedSeats.value = []
   }
 
   // Dipanggil saat Midtrans eksplisit melaporkan pembayaran gagal (onError).
@@ -236,6 +263,8 @@ export const useCartStore = defineStore('cart', () => {
 
   return {
     items,
+    selectedSeats,
+    setSeats,
     addToCart,
     increment,
     decrement,
