@@ -352,7 +352,7 @@ async function downloadReceipt(order) {
           </div>
         </div>
 
-        <ul class="order-card__items">
+        <ul class="order-card__items order-card__items--scroll">
           <li v-for="(item, idx) in order.items" :key="idx" class="order-item">
             <div class="order-item__photo">
               <img :src="item.image" :alt="item.name" loading="lazy" />
@@ -704,6 +704,28 @@ async function downloadReceipt(order) {
 
 .order-card__items {
   list-style: none;
+}
+
+.order-card__items--scroll {
+  /* Sekitar 4-5 baris item sebelum discroll, bukan mendorong card jadi
+     panjang ke bawah kalau pesanannya banyak macam. */
+  max-height: 340px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-brown-light) transparent;
+}
+
+.order-card__items--scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.order-card__items--scroll::-webkit-scrollbar-thumb {
+  background-color: var(--color-brown-light);
+  border-radius: 999px;
+}
+
+.order-card__items--scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .order-item {

@@ -1,6 +1,7 @@
 <script setup>
 import { RouterLink } from 'vue-router'
 import logoNavbar from '@/components/icons/logo-utama.png'
+import logoInstagram from '@/components/icons/logo-instagram.svg'
 
 const year = new Date().getFullYear()
 </script>
@@ -27,16 +28,22 @@ const year = new Date().getFullYear()
 
       <div class="footer__col">
         <h4>Kunjungi Kami</h4>
-        <p>Jl. Braga No. 21, Bandung</p>
+        <p>Area ULBI, Sarijadi, Bandung</p>
         <p>Setiap hari, 07.00 &ndash; 22.00</p>
         <p>+62 812-3456-7890</p>
       </div>
 
       <div class="footer__col">
         <h4>Ikuti Kami</h4>
-        <a href="#">Instagram</a>
-        <a href="#">TikTok</a>
-        <a href="#">WhatsApp</a>
+        <a
+          href="https://www.instagram.com/kindlecoffe.id/"
+          target="_blank"
+          rel="noopener"
+          class="footer__social"
+        >
+          <img :src="logoInstagram" alt="Instagram" class="footer__social-icon" />
+          Instagram
+        </a>
       </div>
     </div>
 
@@ -117,6 +124,19 @@ const year = new Date().getFullYear()
 
 .footer__col a {
   transition: color 0.25s ease;
+}
+
+.footer__social {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 8px;
+}
+
+.footer__social-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+  filter: brightness(0) invert(0.85);
 }
 
 .footer__col a::after {
