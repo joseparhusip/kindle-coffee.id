@@ -4,6 +4,7 @@ import { RouterLink } from 'vue-router'
 import { jsPDF } from 'jspdf'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/data/products'
+import { loadMidtransSnap } from '@/utils/loadMidtransSnap'
 import logoUtama from '@/data/img/logo-loading.png'
 
 const cart = useCartStore()
@@ -74,17 +75,25 @@ function formatCountdown(order) {
 
 const resumingOrderId = ref(null)
 
-function resumePayment(order) {
+async function resumePayment(order) {
   if (order.status !== 'pending' || isPendingExpired(order) || !order.snapToken) return
-
-  if (typeof window === 'undefined' || !window.snap) {
-    console.error('Snap.js Midtrans belum siap dimuat.')
-    return
-  }
 
   resumingOrderId.value = order.id
 
-  window.snap.pay(order.snapToken, {
+  let snap
+  try {
+    // Sama seperti di CartView: Snap.js di-load lazy di sini, bukan lewat
+    // index.html, supaya halaman lain (Beranda/Menu/Tentang) tidak ikut
+    // menanggung waktu load script pembayaran yang sebenarnya tidak
+    // mereka butuhkan.
+    snap = await loadMidtransSnap()
+  } catch (err) {
+    console.error('Gagal memuat Snap.js Midtrans:', err)
+    resumingOrderId.value = null
+    return
+  }
+
+  snap.pay(order.snapToken, {
     onSuccess(result) {
       console.log('Pembayaran berhasil:', result)
       cart.markOrderPaid(order.id)

@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCartStore } from '@/stores/cart'
 import { formatRupiah } from '@/data/products'
+import { loadMidtransSnap } from '@/utils/loadMidtransSnap'
 
 const cart = useCartStore()
 const orderPlaced = ref(false)
@@ -70,7 +71,12 @@ async function handleCheckout() {
     // onSuccess/onClose yang mungkin tidak akan pernah terpanggil).
     cart.createPendingOrder(orderId, data.token)
 
-    window.snap.pay(data.token, {
+    // Snap.js sengaja tidak dimuat global di index.html (biar gak nge-block
+    // render di semua halaman) — baru di-load sekarang, tepat saat mau
+    // dipakai. Kalau sudah pernah dimuat sebelumnya, ini langsung resolve.
+    const snap = await loadMidtransSnap()
+
+    snap.pay(data.token, {
       onSuccess(result) {
         console.log('Pembayaran berhasil:', result)
         cart.markOrderPaid(orderId)

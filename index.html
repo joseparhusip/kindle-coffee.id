@@ -5,18 +5,32 @@
     <link rel="icon" type="image/png" href="/logo-baru.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kindle Coffee</title>
+
     <!--
-      Snap.js dari Midtrans. Ini yang menyediakan window.snap.pay(...) di
-      frontend. data-client-key HARUS client key (bukan server key yang
-      dipakai di api/checkout.js) — ambil dari Midtrans Dashboard >
-      Settings > Access Keys. Untuk sandbox dulu, nanti ganti domain
-      app.sandbox.midtrans.com -> app.midtrans.com kalau sudah production.
+      Preconnect ke domain font Google supaya koneksi (DNS + TLS) sudah
+      "dihangatkan" sebelum CSS-nya benar-benar diminta, biar font gak
+      nambah waktu blocking pas render pertama.
     -->
-    <script
-      type="text/javascript"
-      src="https://app.sandbox.midtrans.com/snap/snap.js"
-      data-client-key="SB-Mid-client-gAm8oXUyihl8XTj-"
-    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;0,800;1,500;1,600&family=Poppins:wght@300;400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+
+    <!--
+      CATATAN PENTING soal performa:
+      Script Midtrans Snap.js SENGAJA TIDAK dimuat di sini lagi.
+      Sebelumnya <script src="...snap.js"> ditaruh di index.html, artinya
+      ke-load & mem-block render di SEMUA halaman (Beranda, Menu, Tentang),
+      padahal cuma dibutuhkan pas user checkout. Itu penyebab utama
+      "Permintaan pemblokiran render" ~1.3 detik di laporan Lighthouse.
+
+      Sekarang di-load lazy (dynamic <script> injection) hanya di
+      CartView.vue & HistoryView.vue lewat src/utils/loadMidtransSnap.js,
+      persis sebelum tombol bayar dipakai. Lihat file itu untuk detail
+      client key & switch sandbox->production.
+    -->
   </head>
   <body>
     <div id="app"></div>

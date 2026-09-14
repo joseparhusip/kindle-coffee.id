@@ -42,7 +42,7 @@ function handleAdd() {
 <template>
   <article class="dish">
     <div class="dish__photo">
-      <img :src="product.image" :alt="product.name" loading="lazy" />
+      <img :src="product.image" :alt="product.name" loading="lazy" decoding="async" />
     </div>
 
     <div class="dish__body">

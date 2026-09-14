@@ -24,7 +24,14 @@ function closeMenu() {
   <header class="navbar">
     <div class="navbar__inner container">
       <RouterLink to="/" class="navbar__brand" @click="closeMenu">
-        <img :src="logoNavbar" alt="Kindle Coffee" class="navbar__logo" />
+        <img
+          :src="logoNavbar"
+          alt="Kindle Coffee"
+          class="navbar__logo"
+          width="64"
+          height="64"
+          fetchpriority="high"
+        />
       </RouterLink>
 
       <nav class="navbar__links" :class="{ 'is-open': menuOpen }">

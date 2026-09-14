@@ -11,7 +11,15 @@ const year = new Date().getFullYear()
     <div class="container footer__grid">
       <div class="footer__brand">
         <div class="footer__brandrow">
-          <img :src="logoNavbar" alt="Kindle Coffee" class="footer__logo" />
+          <img
+            :src="logoNavbar"
+            alt="Kindle Coffee"
+            class="footer__logo"
+            width="64"
+            height="64"
+            loading="lazy"
+            decoding="async"
+          />
         </div>
         <p class="footer__desc">
           Kopi yang diracik pelan-pelan, untuk momen yang ingin kamu nikmati lebih lama.
